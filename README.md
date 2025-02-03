@@ -1,64 +1,103 @@
-
 # TCP Server-Client Communication in Swift
 
-This project provides a simple TCP server-client implementation in Swift using Apple's `Network` framework. It allows sending and receiving messages entirely through the terminal.
+This project provides two implementations of a TCP server-client communication system using Swift's `Network` framework.
 
-## 📌 Features
-- **TCP Server (`TCPServerTerminal.swift`)**
-  - Listens for client connections on port `8080`.
-  - Echoes back any message received.
-  - Graceful shutdown with the `'q'` command (no need to close the terminal).
+## 📂 Folder Structure
+
+```
+/VisionTCP
+│── /Terminal
+│   ├── TCPClientTerminal.swift
+│   ├── TCPServerTerminal.swift
+│
+│── /TerminalJSON
+│   ├── ClientJSON.swift
+│   ├── ServerJSON.swift
+│
+│── README.md
+```
+
+---
+
+## 📌 Project Overview
+
+### **1️⃣ Terminal (Basic TCP Communication)**
+This implementation supports **basic message exchange** over TCP using raw text.
+
+- **TCPClientTerminal.swift**:  
+  - Connects to a TCP server.
+  - Allows users to type messages manually.
+  - Receives and displays responses from the server.
   
-- **TCP Client (`TCPClientTerminal.swift`)**
-  - Connects to the TCP server on `localhost:8080`.
-  - Allows users to send messages via terminal input.
-  - Displays the response from the server in real time.
+- **TCPServerTerminal.swift**:  
+  - Listens for incoming TCP connections.
+  - Receives text-based messages and echoes them back.
+  - Supports multiple clients.
+
+### **2️⃣ TerminalJSON (Advanced JSON Communication)**
+This implementation extends the **basic TCP model** by handling **structured JSON data**.
+
+- **ClientJSON.swift**:
+  - Connects to a TCP server and sends **structured JSON messages**.
+  - Automatically generates test cases with valid and invalid JSON structures.
+  - Simulates real-world scenarios by sending bulk messages.
+  - Defines the `UserData` struct, used for serialization and deserialization.
+  - Includes mock data generation for testing different cases.
+
+- **ServerJSON.swift**:
+  - Receives and **validates JSON** sent by clients.
+  - Logs and handles **malformed, incomplete, or incorrect data**.
+  - Responds to clients with success/error messages.
+  - Defines the `UserData` struct, used for serialization and deserialization.
 
 ---
 
 ## 🚀 Setup & Usage
 
-### **1️⃣ Run the TCP Server**
-1. Open a terminal and navigate to the project folder.
-2. Run the server with:
-   ```sh
-   swift TCPServerTerminal.swift
-   ```
-3. You should see:
-   ```
-   ✅ Server started on port 8080
-   🛑 Type 'q' and press Enter to stop the server:
-   ```
+### **1️⃣ Running the Basic Terminal Version**
 
-### **2️⃣ Run the TCP Client**
-1. Open a second terminal and navigate to the project folder.
-2. Start the client with:
-   ```sh
-   swift TCPClientTerminal.swift
-   ```
-3. If successful, you'll see:
-   ```
-   ✅ Connected to the server
-   ✉️ Type message: 
-   ```
-4. Type any message and press **Enter**. It will be sent to the server.
+#### **Start the Server:**
+```sh
+cd Terminal
+swift TCPServerTerminal.swift
+```
+
+#### **Start the Client:**
+```sh
+cd Terminal
+swift TCPClientTerminal.swift
+```
+
+#### **Send Messages:**  
+Type a message in the client terminal and press Enter. The server will echo the message.
 
 ---
 
-## 🛑 Stopping the Server
-To **stop the server**, simply type:
+### **2️⃣ Running the JSON Version**
+
+#### **Start the JSON Server:**
 ```sh
-q
+cd TerminalJSON
+swift ServerJSON.swift
 ```
-and press **Enter**. The server will shut down cleanly without closing the terminal.
+
+#### **Start the JSON Client:**
+```sh
+cd TerminalJSON
+swift ClientJSON.swift
+```
+
+#### **Expected Behavior:**
+- The client sends **mock JSON objects** (valid & invalid).
+- The server **validates, logs, and responds** accordingly.
 
 ---
 
 ## 🛠️ Troubleshooting
 
-### **❌ Client Fails to Connect**
+### **Client Fails to Connect**
 1. Ensure the **server is running first** before starting the client.
-2. Try changing `"127.0.0.1"` to `"localhost"` in `TCPClientTerminal.swift`.
+2. Try changing `"127.0.0.1"` to `"localhost"` in `ClientJSON.swift`.
 3. Check if another process is using **port 8080**:
    ```sh
    lsof -i :8080
@@ -69,13 +108,12 @@ and press **Enter**. The server will shut down cleanly without closing the termi
    ```
    Then restart the server.
 
-### **🌐 Running Over a Network**
-If running the **server and client on different machines**:
-- Find the **server's local IP** using:
+### **Handling Network Issues**
+- If testing **on two different machines**, find the **server's local IP**:
   ```sh
   ifconfig | grep "inet "
   ```
-- In `TCPClientTerminal.swift`, replace `"127.0.0.1"` with the **server's IP**.
+- Replace `"localhost"` in `ClientJSON.swift` with the **server's IP**.
 
 ---
 
