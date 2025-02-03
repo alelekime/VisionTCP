@@ -9,8 +9,8 @@ import Foundation
 import Network
 
 class TCPServerTerminal {
-    let port: NWEndpoint.Port = 8080
     var listener: NWListener?
+    var clients: [NWConnection] = []
     var isRunning = true
     
     init() {
@@ -27,15 +27,17 @@ class TCPServerTerminal {
         
         listener?.start(queue: .global())
         print("✅ Server started on port \(port)")
+        print("✉️ Type message to send to all clients (or 'q' to quit): ", terminator: "")
         
         // Start listening for user input
         DispatchQueue.global().async {
-            self.waitForQuitCommand()
+            self.waitForUserInput()
         }
     }
     
     private func handleNewConnection(_ connection: NWConnection) {
-        print("🔗 New client connected!")
+        print("\n🔗 New client connected!")
+        clients.append(connection)
         
         connection.stateUpdateHandler = { newState in
             switch newState {
@@ -44,6 +46,7 @@ class TCPServerTerminal {
                 self.receiveMessage(connection)
             case .failed(let error):
                 print("❌ Client connection failed: \(error)")
+                self.removeClient(connection)
                 connection.cancel()
             default:
                 break
@@ -56,10 +59,12 @@ class TCPServerTerminal {
     private func receiveMessage(_ connection: NWConnection) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 1024) { data, _, isComplete, error in
             if let data = data, let message = String(data: data, encoding: .utf8) {
-                print("📩 Received from client: \(message)")
-                self.sendMessage("Echo: \(message)", connection: connection)
+                print("\n📩 Received from client: \(message)")
+                self.sendMessage("Echo: \(message)", to: connection)
+                print("\n✉️ Type message to send to all clients (or 'q' to quit): ", terminator: "")
             }
             if isComplete {
+                self.removeClient(connection)
                 connection.cancel()
             } else if error == nil {
                 self.receiveMessage(connection)
@@ -67,7 +72,7 @@ class TCPServerTerminal {
         }
     }
     
-    private func sendMessage(_ message: String, connection: NWConnection) {
+    private func sendMessage(_ message: String, to connection: NWConnection) {
         let data = message.data(using: .utf8)!
         connection.send(content: data, completion: .contentProcessed { error in
             if let error = error {
@@ -76,25 +81,41 @@ class TCPServerTerminal {
         })
     }
     
-    /// Wait for user to type 'q' to quit the server
-    private func waitForQuitCommand() {
+    private func waitForUserInput() {
         while isRunning {
-            print("🛑 Type 'q' and press Enter to stop the server: ", terminator: "")
-            if let input = readLine(), input.lowercased() == "q" {
-                stopServer()
-                break
+            if let input = readLine(), !input.isEmpty {
+                if input.lowercased() == "q" {
+                    stopServer()
+                    break
+                }
+                broadcastMessage(input)
+                print("\n✉️ Type message to send to all clients (or 'q' to quit): ", terminator: "")
             }
         }
     }
     
-    /// Gracefully stop the server
+    private func broadcastMessage(_ message: String) {
+        print("\n📤 Sending to all clients: \(message)")
+        for client in clients {
+            sendMessage(message, to: client)
+        }
+    }
+    
+    private func removeClient(_ connection: NWConnection) {
+        clients.removeAll { $0 === connection }
+    }
+    
     private func stopServer() {
-        print("🛑 Stopping server...")
+        print("\n🛑 Stopping server...")
         listener?.cancel()
         isRunning = false
+        for client in clients {
+            client.cancel()
+        }
         exit(0)
     }
 }
 
-//let server = TCPServerTerminal()
-//RunLoop.main.run()
+// Start the server
+let server = TCPServerTerminal()
+RunLoop.main.run()
