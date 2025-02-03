@@ -10,6 +10,7 @@ import Network
 
 class TCPClientTerminal {
     var connection: NWConnection?
+    var isRunning = true
     
     init(host: String, port: UInt16) {
         connection = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
@@ -18,10 +19,12 @@ class TCPClientTerminal {
             switch state {
             case .ready:
                 print("✅ Connected to the server")
+                print("\n✉️ Type message (or 'q' to quit): ", terminator: "")
                 self.listenForMessages()
                 self.startUserInputLoop()
             case .failed(let error):
                 print("❌ Connection failed: \(error)")
+                self.connection?.cancel()
             default:
                 break
             }
@@ -32,10 +35,14 @@ class TCPClientTerminal {
     
     private func startUserInputLoop() {
         DispatchQueue.global().async {
-            while true {
-                print("✉️ Type message: ", terminator: "")
+            while self.isRunning {
                 if let input = readLine(), !input.isEmpty {
+                    if input.lowercased() == "q" {
+                        self.quitClient()
+                        break
+                    }
                     self.sendMessage(input)
+                    print("\n✉️ Type message (or 'q' to quit): ", terminator: "")
                 }
             }
         }
@@ -53,16 +60,26 @@ class TCPClientTerminal {
     private func listenForMessages() {
         connection?.receive(minimumIncompleteLength: 1, maximumLength: 1024) { data, _, isComplete, error in
             if let data = data, let message = String(data: data, encoding: .utf8) {
-                print("\n📩 Server Response: \(message)")
+                print("\n📩 Server says: \(message)")
+                print("\n✉️ Type message (or 'q' to quit): ", terminator: "")
             }
             if isComplete {
-                self.connection?.cancel()
+                self.quitClient()
             } else if error == nil {
                 self.listenForMessages()
             }
         }
     }
+    
+    private func quitClient() {
+        print("\n🛑 Disconnecting from server...")
+        isRunning = false
+        connection?.cancel()
+        exit(0)
+    }
 }
 
-//let client = TCPClientTerminal(host: "localhost", port: 8080)
-//RunLoop.main.run()
+
+// Connect to the server
+let client = TCPClientTerminal(host: "localhost", port: 8080)
+RunLoop.main.run()
